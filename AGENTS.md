@@ -5,9 +5,11 @@ obligatorias.
 
 ## Qué es este repo
 
-Template de SvelteKit 2 + Svelte 5 para proyectos de consultoría. Consume una API externa (no
-tiene base de datos) y trae resuelto lo aburrido: autenticación con cookies, permisos, layout con
-sidebar, formularios, componentes. No es un framework y no debería convertirse en uno: el objetivo
+Template de SvelteKit 2 + Svelte 5 para sitios de contenido/documentación — algo como Starlight de
+Astro, pero en Svelte. Trae resuelto lo aburrido: layout con sidebar de navegación, dark mode,
+componentes. No tiene backend, base de datos, autenticación ni un modelo de usuarios propio — nada
+de eso es necesario para este tipo de sitio; si un proyecto concreto lo necesita, se agrega ahí, no
+en el template. No es un framework y no debería convertirse en uno: el objetivo
 es que se clone y se construya sin fricción ni sorpresas. Ver [`README.md`](./README.md) para el
 stack, la estructura de carpetas y cómo arrancar.
 
@@ -44,17 +46,16 @@ inventar uno nuevo.
 
 ## Arquitectura / Código
 
-- **Services** son los únicos responsables de llamadas a la API. Nada de `fetch`/HTTP directo en
-  componentes o hooks. Un service extiende `BaseService` (`$lib/core/service.ts`) y vive en
-  `features/<slice>/services/` — ver `features/users/services/users.ts` como referencia.
-- **Composición sobre herencia** en componentes y hooks: piezas pequeñas y componibles. La
-  excepción deliberada es la jerarquía de services (`extends BaseService`), que existe para
-  compartir la resolución de token/cliente API entre todos los services.
+- **Services** son los únicos responsables de llamadas a una API, si un feature concreto termina
+  necesitando una. Nada de `fetch`/HTTP directo en componentes o hooks — el service vive en
+  `features/<slice>/services/`. El template no trae una clase base de servicios por defecto;
+  si aparece más de un service, extrae lo compartido (resolución de cliente/token) a
+  `$lib/core/` en ese momento, no antes.
+- **Composición sobre herencia** en componentes y hooks: piezas pequeñas y componibles.
 - **Prohibido magic strings:** usa constantes tipadas o `enum` para valores fijos, keys, rutas de
-  API, estados. Para identidad de dominio con un conjunto cerrado de valores (`UserRole`), usa
-  `enum`. Para tags de capacidad tipo `"recurso:acción"` (`Permission` en
-  `$lib/config/permissions.ts`), un string-literal union con `as const satisfies` está bien —
-  sigue el patrón que ya usa la pieza equivalente antes de introducir uno nuevo.
+  API, estados. Para identidad de dominio con un conjunto cerrado de valores, usa `enum`. Para
+  tags de capacidad tipo `"recurso:acción"`, un string-literal union con `as const satisfies` está
+  bien — sigue el patrón que ya usa la pieza equivalente antes de introducir uno nuevo.
 
 ## Tipos
 
@@ -70,23 +71,18 @@ inventar uno nuevo.
 
 ## Estado
 
-- El estado compartido con runes vive en clases dentro de `$lib/hooks/` (`Disclosure`, `Filters`,
-  `Pagination`, `IsMobile`, en `$lib/hooks/*.svelte.ts`). Antes de crear uno nuevo, evalúa si el
+- El estado compartido con runes vive en clases dentro de `$lib/hooks/` (`Disclosure`, `IsMobile`,
+  en `$lib/hooks/*.svelte.ts`). Antes de crear uno nuevo, evalúa si el
   estado es realmente compartido o si es local a un componente — en ese caso, un `$state` dentro
   del propio componente basta.
-- **`$state` a nivel de módulo está prohibido para datos que dependan del usuario.** En SSR los
-  módulos son singletons por proceso, no por request: un `$state` exportado con datos de usuario
-  filtra datos entre usuarios — es la única de estas reglas cuya violación es un incidente de
-  seguridad y no una molestia. El estado por request va en `locals`, en `data` del `load`, o en
-  contexto de Svelte. Si te encuentras escribiendo `if (browser)` alrededor de una mutación de
-  estado global, esa no es una guarda: es la señal de que el estado está en el sitio equivocado.
-- Los hooks de estado no llaman a la API directamente: delegan en services.
-
-## Permisos
-
-Deny by default: rol desconocido → sin permisos, ruta no declarada → denegada. Un olvido debe
-producir un 403, no un acceso. Al agregar una página o un permiso nuevo, decláralo explícitamente
-en `$lib/config/permissions.ts` — no hay un valor "sin restricción" que puedas usar por descuido.
+- **`$state` a nivel de módulo está prohibido para datos que dependan del visitante o de la
+  request.** En SSR los módulos son singletons por proceso, no por request: un `$state` exportado
+  con ese tipo de datos filtra información entre visitantes distintos — es la única de estas
+  reglas cuya violación es un incidente de seguridad y no una molestia. El estado por request va
+  en `locals`, en `data` del `load`, o en contexto de Svelte. Si te encuentras escribiendo
+  `if (browser)` alrededor de una mutación de estado global, esa no es una guarda: es la señal de
+  que el estado está en el sitio equivocado.
+- Los hooks de estado no llaman a una API directamente: si hace falta, delegan en un service.
 
 ## Convenciones de código
 
