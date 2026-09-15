@@ -41,7 +41,7 @@
 		<div>docs</div>
 
 		<NavigationMenu.Root viewport={isMobile.current}>
-			<NavigationMenu.List class="flex-wrap">
+			<NavigationMenu.List class="flex-wrap gap-x-2">
 				{#each links as link}
 					<NavigationMenu.Item>
 						<NavigationMenu.Link>
